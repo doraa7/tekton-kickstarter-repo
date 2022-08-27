@@ -1,0 +1,12 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: cron-binding
+spec:
+  params:
+    - name: HOST
+      value: $(body.host)
+    - name: DATABASE
+      value: $(body.database)
+    - name: DEST
+      value: $(body.destination)

@@ -1,0 +1,112 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: clean
+  namespace: default
+spec:
+  params:
+    - name: path
+
+  workspaces:
+    - name: source
+
+  tasks:
+    - name: create-dir
+      params:
+        - name: path
+          value: $(params.path)
+      workspaces:
+        - name: source
+          workspace: source
+      taskSpec:
+        params:
+        - name: path
+          type: string
+        workspaces:
+          - name: source
+        steps:
+          - name: create-dir
+            image: ubuntu
+            script: |
+              #!/usr/bin/env bash
+              mkdir -p "$(workspaces.source.path)/$(params.path)"
+
+
+    - name: clean-dir
+      runAfter:
+        - create-dir
+      taskRef:
+        name: clean
+        kind: ClusterTask
+      params:
+        - name: path
+          value: $(params.path)
+      workspaces:
+        - name: source
+          workspace: source
+
+    - name: ls-dir
+      runAfter:
+        - clean-dir
+      params:
+        - name: path
+          value: $(params.path)
+      workspaces:
+        - name: source
+          workspace: source
+      taskSpec:
+        params:
+          - name: path
+            type: string
+        workspaces:
+          - name: source
+        steps:
+          - name: ls-dir
+            image: ubuntu
+            script: |
+              #!/usr/bin/env bash
+              ls -la "$(workspaces.source.path)"
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: clean
+  namespace: default
+spec:
+  params:
+    - name: path
+      value: '/somedir'
+  pipelineRef:
+    name: clean
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+---
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  name: clean
+  namespace: default
+spec:
+  params:
+    - name: path
+      value: 'somedir'
+  taskRef:
+    name: clean
+    kind: ClusterTask
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+
